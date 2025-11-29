@@ -1,0 +1,5 @@
+{
+  "name": "DroneHub AI",
+  "description": "An all-in-one AI-powered application for drone enthusiasts. Features include an expert chatbot, search-grounded information, deep analysis tools, visual field notes, flight log analytics, and a pilot community hub.",
+  "requestFramePermissions": []
+}
