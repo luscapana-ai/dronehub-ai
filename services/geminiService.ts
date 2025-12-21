@@ -23,6 +23,50 @@ export const streamChatResponse = async (history: { role: 'user' | 'model'; part
     return chat.sendMessageStream({ message: newMessage });
 };
 
+export const generatePersonaResponse = async (input: string, context: { user: string; message: string }[]) => {
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
+    
+    const contextStr = context.map(c => `${c.user}: ${c.message}`).join('\n');
+    
+    const prompt = `
+        You are roleplaying as a drone pilot in a community chat.
+        
+        Recent chat history:
+        ${contextStr}
+        
+        New message from user: "${input}"
+        
+        Your task:
+        1. Create a persona (username) for yourself.
+        2. Generate a response to the new message or the conversation context.
+        3. Pick a color for your avatar from: 'text-red-400', 'text-blue-400', 'text-green-400', 'text-yellow-400', 'text-purple-400', 'text-pink-400'.
+        
+        Return the result as a JSON object with keys: user, message, avatarColor.
+    `;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    user: { type: Type.STRING },
+                    message: { type: Type.STRING },
+                    avatarColor: { type: Type.STRING },
+                },
+                required: ["user", "message", "avatarColor"]
+            }
+        }
+    });
+
+    if (response.text) {
+        return JSON.parse(response.text);
+    }
+    throw new Error("No response from persona");
+};
+
 // GROUNDING
 export const generateGroundedResponse = async (prompt: string, tool: 'googleSearch' | 'googleMaps') => {
     const ai = new GoogleGenAI({ apiKey: getApiKey() });
@@ -94,51 +138,6 @@ export const generateSpeech = async (text: string) => {
     return base64Audio;
 };
 
-// COMMUNITY SIMULATION
-export const generatePersonaResponse = async (userMessage: string, chatContext: { user: string, message: string }[]) => {
-    const ai = new GoogleGenAI({ apiKey: getApiKey() });
-    
-    const personas = [
-        { name: "SpeedDemon_FPV", style: "Excited, competitive, talks about PID tuning and lap times. Uses slang like 'rip', 'send it', 'gap'." },
-        { name: "CineWhoop_Steve", style: "Calm, artistic, focuses on ND filters, smoothness, and composition. Helpful to beginners." },
-        { name: "CrashTestDummy", style: "Self-deprecating, funny, constantly breaking parts. Asks for repair advice." },
-        { name: "TechGuru_99", style: "Very technical, precise, knows everything about protocols (ELRS, Crossfire) and soldering." },
-        { name: "NoobPilot101", style: "Curious, slightly confused, asks beginner questions but is enthusiastic." }
-    ];
-
-    const randomPersona = personas[Math.floor(Math.random() * personas.length)];
-    
-    const prompt = `
-        You are roleplaying as a drone enthusiast named "${randomPersona.name}" in a group chat.
-        Your personality is: ${randomPersona.style}.
-        
-        Recent chat history:
-        ${chatContext.map(c => `${c.user}: ${c.message}`).join('\n')}
-        
-        User just said: "${userMessage}"
-        
-        Write a short, single reply (under 30 words) to the user's message. 
-        Do not use hashtags. Keep it casual and conversational.
-        Return ONLY the message text.
-    `;
-
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-    });
-
-    return {
-        user: randomPersona.name,
-        message: response.text?.trim() || "Copy that!",
-        avatarColor: getRandomColor()
-    };
-};
-
-function getRandomColor() {
-    const colors = ['text-red-400', 'text-blue-400', 'text-green-400', 'text-yellow-400', 'text-purple-400', 'text-pink-400'];
-    return colors[Math.floor(Math.random() * colors.length)];
-}
-
 // FLIGHT LOG ANALYSIS
 export const analyzeFlightLog = async (logData: string) => {
     const ai = new GoogleGenAI({ apiKey: getApiKey() });
@@ -163,6 +162,33 @@ export const analyzeFlightLog = async (logData: string) => {
         contents: prompt,
     });
     
+    return response.text;
+};
+
+// AIRSPACE & REGULATIONS
+export const getAirspaceInfo = async (location: string) => {
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
+    const prompt = `
+        Check the current drone flight regulations, airspace classification, and any Temporary Flight Restrictions (TFRs) for this location: "${location}".
+        Use Google Search Grounding to find the latest data.
+        
+        Provide a safety report including:
+        1. **Airspace Class**: (e.g., Class B, G, etc.)
+        2. **Authorization**: Is LAANC authorization required?
+        3. **Local Restrictions**: Specific city/park rules.
+        4. **Hazards**: Nearby airports, helipads, or stadiums.
+        
+        Conclude with a clear "Safe to Fly?" assessment.
+    `;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-3-pro-preview',
+        contents: prompt,
+        config: {
+            tools: [{ googleSearch: {} }]
+        }
+    });
+
     return response.text;
 };
 
