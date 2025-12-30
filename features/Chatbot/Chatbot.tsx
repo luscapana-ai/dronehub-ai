@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { streamChatResponse } from '../../services/geminiService';
 import type { ChatMessage } from '../../types';
@@ -27,13 +26,16 @@ export const Chatbot: React.FC<ChatbotProps> = ({ history, setHistory }) => {
         if (!prompt.trim() || isLoading) return;
 
         const newUserMessage: ChatMessage = { role: 'user', parts: [{ text: prompt }] };
-        setHistory(prev => [...prev, newUserMessage]);
+        // Build the new history locally so we can pass the updated context to the streaming service
+        const newHistory = [...history, newUserMessage];
+        setHistory(newHistory);
         setPrompt('');
         setIsLoading(true);
 
         try {
-            const stream = await streamChatResponse(history, prompt);
-            
+            // Pass the updated history (including the just-added user message) to the streaming call
+            const stream = await streamChatResponse(newHistory, prompt);
+
             let modelResponseText = '';
             setHistory(prev => [...prev, { role: 'model', parts: [{ text: '' }] }]);
 
@@ -41,9 +43,9 @@ export const Chatbot: React.FC<ChatbotProps> = ({ history, setHistory }) => {
                 const c = chunk as GenerateContentResponse;
                 modelResponseText += c.text;
                 setHistory(prev => {
-                    const newHistory = [...prev];
-                    newHistory[newHistory.length - 1] = { role: 'model', parts: [{ text: modelResponseText }] };
-                    return newHistory;
+                    const updated = [...prev];
+                    updated[updated.length - 1] = { role: 'model', parts: [{ text: modelResponseText }] };
+                    return updated;
                 });
             }
         } catch (error) {
@@ -51,7 +53,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ history, setHistory }) => {
             setHistory(prev => {
                 const newHistory = [...prev];
                 const lastMessage = newHistory[newHistory.length - 1];
-                if (lastMessage.role === 'model') {
+                if (lastMessage && lastMessage.role === 'model') {
                     lastMessage.parts[0].text = "Sorry, I encountered an error. Please try again.";
                 } else {
                     newHistory.push({ role: 'model', parts: [{ text: "Sorry, I encountered an error. Please try again." }] });
