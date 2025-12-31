@@ -1,162 +1,249 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
-// Fixed: Removed non-existent 'Tool' icon and other unused icons from import list to fix compilation error.
-import { Layers, Activity, ShoppingBag, Trash, PlusCircle } from '../../components/Icons';
+import { 
+    Layers, Activity, ShoppingBag, Trash, PlusCircle, X, 
+    ShieldCheck, Activity as ActivityIcon, AlertCircle, 
+    CheckCircle2, Clock, Zap, Cpu, Settings, FileText, Search, BrainCircuit, Tag, Battery
+} from '../../components/Icons';
+import { analyzeFlightLog, generateChatResponse } from '../../services/geminiService';
+import { Spinner } from '../../components/ui/Spinner';
 import type { Feature } from '../../App';
+import Markdown from 'react-markdown';
+
+type DroneClass = 'FPV Racing' | 'Cinematic' | 'Industrial' | 'Long Range';
+
+interface MaintenanceEvent {
+    id: string;
+    date: string;
+    description: string;
+    technician: string;
+}
+
+interface BatteryPack {
+    id: string;
+    label: string;
+    cycles: number;
+    health: number;
+    resistance: number; // mOhm
+}
 
 interface DroneAsset {
     id: string;
     model: string;
     nickname: string;
-    integrity: number; // 0-100
+    droneClass: DroneClass;
+    integrity: number; 
     flightHours: number;
     lastService: string;
     status: 'Ready' | 'Maintenance' | 'Damaged' | 'In Flight';
     parts: { name: string; health: number }[];
+    serviceHistory: MaintenanceEvent[];
 }
 
-const INITIAL_HANGAR: DroneAsset[] = [
-    {
-        id: 'h1',
-        model: 'DJI FPV',
-        nickname: 'Nebula-01',
-        integrity: 94,
-        flightHours: 12.5,
-        lastService: '3 days ago',
-        status: 'Ready',
-        parts: [
-            { name: 'Props', health: 85 },
-            { name: 'Motors', health: 98 },
-            { name: 'Gimbal', health: 100 }
-        ]
-    },
-    {
-        id: 'h2',
-        model: 'Custom 5" Freestyle',
-        nickname: 'StreetRacer',
-        integrity: 72,
-        flightHours: 45.2,
-        lastService: '2 weeks ago',
-        status: 'Maintenance',
-        parts: [
-            { name: 'Props', health: 40 },
-            { name: 'Frame', health: 88 },
-            { name: 'ESC', health: 65 }
-        ]
-    }
-];
+const STORAGE_KEY = 'drone_hub_fleet';
+const BATTERY_KEY = 'drone_hub_batteries';
 
-interface HangarProps {
-    setActiveFeature: (feature: Feature) => void;
-}
+export const Hangar: React.FC<{ setActiveFeature: (feature: Feature) => void }> = ({ setActiveFeature }) => {
+    const [view, setView] = useState<'Fleet' | 'Batteries'>('Fleet');
+    const [fleet, setFleet] = useState<DroneAsset[]>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? JSON.parse(saved) : [];
+    });
+    const [batteries, setBatteries] = useState<BatteryPack[]>(() => {
+        const saved = localStorage.getItem(BATTERY_KEY);
+        return saved ? JSON.parse(saved) : [
+            { id: 'b1', label: '6S 1300mAh #A1', cycles: 42, health: 88, resistance: 4.2 },
+            { id: 'b2', label: '4S 850mAh #C4', cycles: 12, health: 96, resistance: 2.1 }
+        ];
+    });
 
-export const Hangar: React.FC<HangarProps> = ({ setActiveFeature }) => {
-    const [fleet, setFleet] = useState<DroneAsset[]>(INITIAL_HANGAR);
+    const [showRegisterModal, setShowRegisterModal] = useState(false);
+    const [auditReport, setAuditReport] = useState<string | null>(null);
+    const [isAuditLoading, setIsAuditLoading] = useState(false);
 
-    const getHealthColor = (health: number) => {
-        if (health > 85) return 'bg-emerald-500';
-        if (health > 60) return 'bg-amber-500';
-        return 'bg-red-500';
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(fleet));
+        localStorage.setItem(BATTERY_KEY, JSON.stringify(batteries));
+    }, [fleet, batteries]);
+
+    const fleetStats = useMemo(() => {
+        const totalHours = fleet.reduce((acc, d) => acc + d.flightHours, 0);
+        const avgIntegrity = Math.round(fleet.reduce((acc, d) => acc + d.integrity, 0) / (fleet.length || 1));
+        const maintenanceCount = fleet.filter(d => d.status === 'Maintenance' || d.status === 'Damaged').length;
+        const readyCount = fleet.filter(d => d.status === 'Ready').length;
+        return { totalHours, avgIntegrity, maintenanceCount, readyCount };
+    }, [fleet]);
+
+    const handleCommissionToMarket = (drone: DroneAsset) => {
+        const marketDraft = {
+            title: `${drone.model} - ${drone.nickname}`,
+            description: `Pilot-owned ${drone.droneClass}. Total Flight Time: ${drone.flightHours}h. Verified Integrity: ${drone.integrity}%.`,
+            price: Math.max(100, Math.round(500 - (drone.flightHours * 5))),
+            weightGrams: 249,
+            category: 'Drone'
+        };
+        localStorage.setItem('market_draft_payload', JSON.stringify(marketDraft));
+        setActiveFeature('Marketplace');
+    };
+
+    const runFleetAudit = async () => {
+        if (fleet.length === 0) return;
+        setIsAuditLoading(true);
+        try {
+            const fleetSummary = fleet.map(d => `${d.nickname} (${d.model}): ${d.integrity}% health, ${d.flightHours}h total.`).join('\n');
+            const prompt = `Act as a Senior Drone Engineering Auditor. Analyze this fleet: \n${fleetSummary}\nIdentify risks and schedule maintenance. Use Markdown.`;
+            const response = await generateChatResponse([], prompt, 'gemini-3-pro-preview', true);
+            setAuditReport(response.text);
+        } catch (err) {
+            console.error("Audit failed", err);
+        } finally {
+            setIsAuditLoading(false);
+        }
     };
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-800/40 p-8 rounded-[3rem] border border-gray-800 shadow-2xl backdrop-blur-md">
-                <div className="flex items-center gap-6">
-                    <div className="p-5 bg-cyan-500/10 rounded-3xl border border-cyan-500/20 shadow-[0_0_20px_rgba(6,182,212,0.1)]">
-                        <Layers className="w-10 h-10 text-cyan-400" />
-                    </div>
-                    <div>
-                        <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic">Pilot Hangar</h2>
-                        <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">Fleet Management & Maintenance Pipeline</p>
-                    </div>
-                </div>
-                <div className="flex gap-3">
-                    <Button variant="secondary" className="px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-gray-900 border border-gray-700">
-                        <PlusCircle className="w-4 h-4 mr-2" /> Register Asset
-                    </Button>
-                </div>
+        <div className="max-w-7xl mx-auto space-y-8 pb-20 animate-fade-in">
+            {/* Navigation Tabs */}
+            <div className="flex gap-4 justify-center">
+                <button 
+                    onClick={() => setView('Fleet')}
+                    className={`px-10 py-4 rounded-3xl font-black uppercase tracking-widest text-[10px] transition-all ${view === 'Fleet' ? 'bg-amber-600 text-white shadow-xl shadow-amber-900/20' : 'bg-gray-800/40 text-gray-500 hover:text-white'}`}
+                >
+                    Tactical Fleet
+                </button>
+                <button 
+                    onClick={() => setView('Batteries')}
+                    className={`px-10 py-4 rounded-3xl font-black uppercase tracking-widest text-[10px] transition-all ${view === 'Batteries' ? 'bg-amber-600 text-white shadow-xl shadow-amber-900/20' : 'bg-gray-800/40 text-gray-500 hover:text-white'}`}
+                >
+                    Battery Lab
+                </button>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                {fleet.map(drone => (
-                    <div key={drone.id} className="group bg-gray-800/40 rounded-[3.5rem] border border-gray-800 p-8 flex flex-col md:flex-row gap-8 hover:border-cyan-500/30 transition-all duration-500 hover:shadow-[0_0_50px_rgba(6,182,212,0.05)] overflow-hidden relative">
-                        {/* Status Badge */}
-                        <div className={`absolute top-8 right-8 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 border ${
-                            drone.status === 'Ready' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                            drone.status === 'Maintenance' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                            'bg-red-500/10 text-red-400 border-red-500/20'
-                        }`}>
-                            <span className={`w-2 h-2 rounded-full ${
-                                drone.status === 'Ready' ? 'bg-emerald-500' :
-                                drone.status === 'Maintenance' ? 'bg-amber-500' : 'bg-red-500'
-                            } ${drone.status === 'Ready' ? 'animate-pulse' : ''}`}></span>
-                            {drone.status}
-                        </div>
-
-                        {/* Visual Icon / Representation */}
-                        <div className="w-full md:w-48 aspect-square bg-gray-900 rounded-[2.5rem] flex items-center justify-center relative shadow-inner">
-                            <Layers className="w-20 h-20 text-gray-800 opacity-30 group-hover:scale-110 transition-transform duration-500" />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-4xl font-black text-white/5 uppercase select-none tracking-tighter">Asset</span>
-                            </div>
-                        </div>
-
-                        {/* Info & Stats */}
-                        <div className="flex-1 space-y-6">
-                            <div>
-                                <h3 className="text-2xl font-black text-white tracking-tighter leading-none">{drone.nickname}</h3>
-                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mt-2">{drone.model}</p>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-gray-900/50 p-4 rounded-3xl border border-gray-700/50">
-                                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Total Ops</p>
-                                    <p className="text-lg font-black text-white">{drone.flightHours}h</p>
+            {view === 'Fleet' ? (
+                <>
+                    <div className="bg-gray-800/40 p-10 rounded-[4rem] border border-gray-800 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative z-10">
+                            <div className="flex flex-col gap-2">
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Fleet Health</p>
+                                <div className="flex items-center gap-4">
+                                    <div className="p-4 bg-emerald-500/10 rounded-3xl border border-emerald-500/20">
+                                        <ShieldCheck className="w-8 h-8 text-emerald-400" />
+                                    </div>
+                                    <p className="text-4xl font-black text-white">{fleetStats.avgHealth}%</p>
                                 </div>
-                                <div className="bg-gray-900/50 p-4 rounded-3xl border border-gray-700/50">
-                                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Integrity</p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <div className="h-1.5 flex-1 bg-gray-800 rounded-full overflow-hidden">
-                                            <div className={`h-full ${getHealthColor(drone.integrity)}`} style={{ width: `${drone.integrity}%` }}></div>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Total Airtime</p>
+                                <div className="flex items-center gap-4">
+                                    <div className="p-4 bg-amber-500/10 rounded-3xl border border-amber-500/20">
+                                        <Clock className="w-8 h-8 text-amber-400" />
+                                    </div>
+                                    <p className="text-4xl font-black text-white">{fleetStats.totalHours.toFixed(1)}h</p>
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Maint. Pending</p>
+                                <div className="flex items-center gap-4">
+                                    <div className="p-4 bg-red-500/10 rounded-3xl border border-red-500/20">
+                                        <AlertCircle className="w-8 h-8 text-red-400" />
+                                    </div>
+                                    <p className="text-4xl font-black text-white">{fleetStats.maintenanceCount}</p>
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-4">
+                                <Button onClick={() => setShowRegisterModal(true)} className="w-full py-5 bg-amber-600 rounded-3xl font-black uppercase tracking-widest text-xs">
+                                    <PlusCircle className="w-4 h-4 mr-3" /> Commission Asset
+                                </Button>
+                                <Button onClick={runFleetAudit} disabled={isAuditLoading} variant="secondary" className="w-full py-5 bg-gray-900 border border-gray-700 rounded-3xl text-[10px] font-black uppercase tracking-widest">
+                                    {isAuditLoading ? <Spinner /> : <><BrainCircuit className="w-4 h-4 mr-3" /> Execute Audit</>}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {auditReport && (
+                        <div className="bg-gray-800/60 p-12 rounded-[4rem] border border-gray-700 shadow-3xl animate-fade-in relative overflow-hidden">
+                            <div className="flex justify-between items-start mb-8">
+                                <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">Fleet Intel Report</h3>
+                                <button onClick={() => setAuditReport(null)} className="p-4 bg-gray-700 rounded-3xl text-white"><X className="w-6 h-6"/></button>
+                            </div>
+                            <div className="prose prose-invert max-w-none bg-gray-900/50 p-10 rounded-[3rem] border border-gray-700/50 prose-amber">
+                                <Markdown>{auditReport}</Markdown>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-10">
+                        {fleet.map(drone => (
+                            <div key={drone.id} className="group bg-gray-800/40 rounded-[4rem] border border-gray-800 p-8 flex flex-col gap-8 hover:border-amber-500 transition-all shadow-xl relative overflow-hidden">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-6">
+                                        <div className="p-5 bg-gray-900 rounded-[2rem] border border-gray-700/50">
+                                            <Cpu className="w-8 h-8 text-gray-700 group-hover:text-amber-400 transition-colors" />
                                         </div>
-                                        <span className="text-xs font-black text-white">{drone.integrity}%</span>
+                                        <div>
+                                            <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic leading-none">{drone.nickname}</h3>
+                                            <span className="text-[9px] font-black text-amber-400 mt-3 block uppercase">{drone.droneClass}</span>
+                                        </div>
+                                    </div>
+                                    <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${drone.status === 'Ready' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                                        {drone.status}
                                     </div>
                                 </div>
-                            </div>
-
-                            <div className="space-y-3 pt-2">
-                                <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Component Analysis</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {drone.parts.map(part => (
-                                        <div key={part.name} className="px-3 py-1.5 bg-gray-900 border border-gray-700 rounded-xl flex items-center gap-3">
-                                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">{part.name}</span>
-                                            <div className={`w-2 h-2 rounded-full ${getHealthColor(part.health)}`}></div>
-                                        </div>
-                                    ))}
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="bg-gray-900/50 p-6 rounded-[2.5rem] border border-gray-700/50">
+                                        <p className="text-[9px] font-black text-gray-600 uppercase mb-2 tracking-widest">Airtime</p>
+                                        <p className="text-3xl font-black text-white tracking-tighter">{drone.flightHours.toFixed(1)}h</p>
+                                    </div>
+                                    <div className="bg-gray-900/50 p-6 rounded-[2.5rem] border border-gray-700/50">
+                                        <p className="text-[9px] font-black text-gray-600 uppercase mb-2 tracking-widest">Hull</p>
+                                        <p className="text-3xl font-black text-white tracking-tighter">{drone.integrity}%</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-4 mt-auto">
+                                    <Button className="flex-1 py-5 bg-gray-900 border border-gray-700 rounded-3xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all">
+                                        <Zap className="w-4 h-4 mr-2" /> Sync
+                                    </Button>
+                                    <Button onClick={() => handleCommissionToMarket(drone)} variant="secondary" className="flex-1 py-5 bg-gray-900 border border-gray-700 rounded-3xl text-[10px] font-black uppercase tracking-widest hover:border-amber-500 hover:text-amber-400 transition-all">
+                                        <Tag className="w-4 h-4 mr-2" /> Sell
+                                    </Button>
                                 </div>
                             </div>
-
-                            <div className="flex gap-2 pt-4">
-                                <Button className="flex-1 py-3 bg-cyan-600 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-lg shadow-cyan-900/20">
-                                    <Activity className="w-3.5 h-3.5 mr-2" /> Sync Log
-                                </Button>
-                                <Button 
-                                    variant="secondary" 
-                                    onClick={() => setActiveFeature('Marketplace')}
-                                    className="flex-1 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-500/10 hover:text-emerald-400 hover:border-emerald-500/30"
-                                >
-                                    <ShoppingBag className="w-3.5 h-3.5 mr-2" /> Exchange
-                                </Button>
-                                <Button variant="secondary" className="px-3 py-3 rounded-2xl hover:bg-red-500/10 hover:text-red-400">
-                                    <Trash className="w-4 h-4" />
-                                </Button>
+                        ))}
+                    </div>
+                </>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {batteries.map(pack => (
+                        <div key={pack.id} className="bg-gray-800/40 p-8 rounded-[3rem] border border-gray-800 hover:border-amber-500/50 transition-all flex flex-col gap-6">
+                            <div className="flex justify-between items-center">
+                                <div className="p-4 bg-gray-900 rounded-2xl border border-gray-700">
+                                    <Battery className={`w-6 h-6 ${pack.health > 90 ? 'text-emerald-400' : 'text-amber-400'}`} />
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xl font-black text-white tracking-tighter italic">{pack.label}</p>
+                                    <p className="text-[9px] font-black text-gray-500 uppercase">{pack.cycles} Cycles</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-gray-900/50 p-4 rounded-2xl border border-gray-700/50">
+                                    <p className="text-[8px] font-black text-gray-600 uppercase mb-1">Health</p>
+                                    <p className="text-2xl font-black text-white">{pack.health}%</p>
+                                </div>
+                                <div className="bg-gray-900/50 p-4 rounded-2xl border border-gray-700/50">
+                                    <p className="text-[8px] font-black text-gray-600 uppercase mb-1">Resistance</p>
+                                    <p className="text-2xl font-black text-white">{pack.resistance}Ω</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                    <button className="bg-gray-900/50 p-8 rounded-[3rem] border-2 border-dashed border-gray-800 flex flex-col items-center justify-center gap-4 text-gray-500 hover:text-amber-400 hover:border-amber-500/50 transition-all">
+                        <PlusCircle className="w-10 h-10" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Register Pack</span>
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

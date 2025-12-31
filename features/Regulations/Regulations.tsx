@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { getAirspaceInfo } from '../../services/geminiService';
 import { Button } from '../../components/ui/Button';
 import { Spinner } from '../../components/ui/Spinner';
-import { ShieldCheck, Search } from '../../components/Icons';
+import { ShieldCheck, Search, Map as MapIcon, AlertCircle, Shield } from '../../components/Icons';
 import Markdown from 'react-markdown';
 
 export const Regulations: React.FC = () => {
@@ -21,6 +21,7 @@ export const Regulations: React.FC = () => {
         setResult(null);
 
         try {
+            // Updated call with location logic
             const info = await getAirspaceInfo(location);
             setResult(info);
         } catch (err) {
@@ -32,53 +33,80 @@ export const Regulations: React.FC = () => {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8">
+        <div className="max-w-7xl mx-auto space-y-8 animate-fade-in pb-20">
             <div className="text-center">
-                <h2 className="text-2xl font-bold text-white flex items-center justify-center gap-2">
-                    <ShieldCheck className="w-8 h-8 text-emerald-400" />
-                    Airspace & Regulations
-                </h2>
-                <p className="text-gray-400 mt-2">Check local flight rules, airspace class, and temporary restrictions.</p>
+                <h2 className="text-4xl font-black text-white uppercase tracking-tighter italic">Strategic Airspace</h2>
+                <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.4em] mt-2">Legal Compliance & Tactical Safety</p>
             </div>
 
-            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 md:p-8 shadow-xl">
-                <form onSubmit={handleCheck} className="flex flex-col md:flex-row gap-4 mb-8">
+            <div className="bg-gray-800/40 p-10 rounded-[4rem] border border-gray-800 shadow-2xl backdrop-blur-md">
+                <form onSubmit={handleCheck} className="flex flex-col md:flex-row gap-6 mb-12">
                     <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
+                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 w-6 h-6" />
                         <input 
                             type="text" 
                             value={location}
                             onChange={(e) => setLocation(e.target.value)}
-                            placeholder="Enter location (e.g., 'Central Park, NYC' or 'Santa Monica Pier')"
-                            className="w-full p-3 pl-10 bg-gray-900 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                            placeholder="Identify Sector (e.g. Golden Gate Park, CA)..."
+                            className="w-full p-6 pl-14 bg-gray-900 border border-gray-700 rounded-3xl text-white font-black uppercase tracking-tight focus:ring-2 focus:ring-emerald-500 focus:outline-none shadow-inner"
                         />
                     </div>
-                    <Button type="submit" disabled={isLoading || !location.trim()} className="md:w-48 bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500">
-                        {isLoading ? 'Checking...' : 'Check Airspace'}
+                    <Button type="submit" disabled={isLoading} className="md:w-64 py-6 bg-emerald-600 rounded-3xl font-black uppercase tracking-widest text-xs">
+                        {isLoading ? <Spinner /> : 'Scan Sector'}
                     </Button>
                 </form>
 
-                <div className="min-h-[200px] border-t border-gray-700 pt-6">
-                    {isLoading ? (
-                         <div className="flex flex-col items-center justify-center py-8 space-y-4">
-                            <Spinner />
-                            <p className="text-emerald-400 font-medium animate-pulse">Consulting aviation maps and local laws...</p>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                    <div className="lg:col-span-8 space-y-8">
+                        {isLoading ? (
+                            <div className="flex flex-col items-center justify-center py-20 space-y-6">
+                                <Spinner text="Consulting Aviation Databases & Local Laws..." />
+                                <div className="flex gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce"></div>
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce delay-100"></div>
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce delay-200"></div>
+                                </div>
+                            </div>
+                        ) : result ? (
+                            <div className="prose prose-invert prose-emerald max-w-none animate-fade-in bg-gray-900/50 p-10 rounded-[3rem] border border-gray-700/50">
+                                <Markdown>{result}</Markdown>
+                            </div>
+                        ) : (
+                            <div className="py-20 text-center opacity-20 space-y-6">
+                                <ShieldCheck className="w-20 h-20 mx-auto" />
+                                <p className="text-sm font-black uppercase tracking-widest">Awaiting Site Scan</p>
+                            </div>
+                        )}
+                    </div>
+
+                    <aside className="lg:col-span-4 space-y-6">
+                        <div className="bg-gray-900/50 p-8 rounded-[3rem] border border-gray-700/50 space-y-6">
+                            <h4 className="text-[11px] font-black text-emerald-400 uppercase tracking-widest border-l-4 border-emerald-500 pl-4 leading-none">Ops Advisory</h4>
+                            <div className="space-y-4">
+                                <div className="flex gap-4">
+                                    <div className="p-3 bg-gray-800 rounded-xl"><MapIcon className="w-5 h-5 text-gray-500" /></div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-white uppercase">Strategic Buffers</p>
+                                        <p className="text-[9px] text-gray-500 uppercase tracking-tight mt-1 leading-relaxed">Grounding AI identifies landing zones and RF interference corridors.</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-4">
+                                    <div className="p-3 bg-gray-800 rounded-xl"><Shield className="w-5 h-5 text-gray-500" /></div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-white uppercase">LAANC Interlink</p>
+                                        <p className="text-[9px] text-gray-500 uppercase tracking-tight mt-1 leading-relaxed">Real-time checking for TFRs and special flight rules.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    ) : error ? (
-                        <div className="text-center text-red-400 py-8">
-                            <p>{error}</p>
+
+                        <div className="bg-amber-500/5 p-8 rounded-[3rem] border border-amber-500/10">
+                            <AlertCircle className="w-8 h-8 text-amber-500 mb-4" />
+                            <p className="text-[10px] font-black text-gray-500 leading-relaxed uppercase tracking-tight">
+                                Important: Information provided is for reference only. AI grounding can lag official NOTAMs. Pilots retain ultimate responsibility.
+                            </p>
                         </div>
-                    ) : result ? (
-                        <div className="prose prose-invert max-w-none">
-                            <Markdown>{result}</Markdown>
-                        </div>
-                    ) : (
-                        <div className="text-center text-gray-500 py-8 flex flex-col items-center">
-                            <ShieldCheck className="w-16 h-16 opacity-20 mb-4" />
-                            <p>Enter a location to see flight safety information.</p>
-                            <p className="text-xs mt-2 text-gray-600">Always follow official FAA/EASA guidelines. This tool uses AI grounding and is for reference only.</p>
-                        </div>
-                    )}
+                    </aside>
                 </div>
             </div>
         </div>

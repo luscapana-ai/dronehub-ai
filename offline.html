@@ -1,0 +1,43 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signal Lost | DroneHub AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .animate-alert { animation: pulse-red 1s infinite; }
+    </style>
+</head>
+<body class="bg-[#0a0a0c] text-white flex items-center justify-center h-screen overflow-hidden font-mono">
+    <div class="text-center p-10 border-2 border-red-500/30 rounded-[3rem] bg-gray-900/50 backdrop-blur-xl relative">
+        <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-red-600 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.3em] animate-alert shadow-[0_0_20px_rgba(239,68,68,0.5)]">
+            Link Lost
+        </div>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-20 h-20 mx-auto text-gray-700 mb-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 20V4"/><line x1="2" y1="2" x2="22" y2="22"/>
+        </svg>
+
+        <h1 class="text-2xl font-black uppercase tracking-tighter italic mb-4">Telemetry Offline</h1>
+        <p class="text-gray-500 text-xs uppercase tracking-widest leading-relaxed max-w-xs mx-auto mb-8">
+            Connection to the Command Deck has been interrupted. Please check your data uplink.
+        </p>
+
+        <button onclick="window.location.reload()" class="px-10 py-4 bg-amber-600 rounded-3xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 transition-all shadow-xl shadow-amber-900/20">
+            Re-initiate Link
+        </button>
+    </div>
+
+    <!-- Decorative HUD corners -->
+    <div class="absolute top-10 left-10 w-10 h-10 border-t-2 border-l-2 border-white/10"></div>
+    <div class="absolute top-10 right-10 w-10 h-10 border-t-2 border-r-2 border-white/10"></div>
+    <div class="absolute bottom-10 left-10 w-10 h-10 border-b-2 border-l-2 border-white/10"></div>
+    <div class="absolute bottom-10 right-10 w-10 h-10 border-b-2 border-r-2 border-white/10"></div>
+</body>
+</html>
