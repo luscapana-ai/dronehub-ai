@@ -1,5 +1,7 @@
 {
   "name": "DroneHub ",
   "description": "An all-in-one AI-powered application for drone enthusiasts. Features include an expert chatbot, search-grounded information, deep analysis tools, visual field notes, flight log analytics, a smart airspace regulations guide, an AI tips generator, and a community marketplace for used gear.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "geolocation"
+  ]
 }
