@@ -8,10 +8,11 @@ import { DeepAnalysis } from './features/DeepAnalysis/DeepAnalysis';
 import { Regulations } from './features/Regulations/Regulations';
 import { FlightLog } from './features/FlightLog/FlightLog';
 import { Tips } from './features/Tips/Tips';
-import { Feather, Bot, Search, BrainCircuit, ShieldCheck, Activity, Lightbulb } from './components/Icons';
+import { Marketplace } from './features/Marketplace/Marketplace';
+import { Feather, Bot, Search, BrainCircuit, ShieldCheck, Activity, Lightbulb, ShoppingBag } from './components/Icons';
 import type { ChatMessage } from './types';
 
-export type Feature = 'Chatbot' | 'Dronepedia' | 'FieldNotes' | 'DeepAnalysis' | 'Regulations' | 'FlightLog' | 'Tips';
+export type Feature = 'Chatbot' | 'Dronepedia' | 'FieldNotes' | 'DeepAnalysis' | 'Regulations' | 'FlightLog' | 'Tips' | 'Marketplace';
 
 const features: { name: Feature; icon: React.FC<React.SVGProps<SVGSVGElement>> }[] = [
     { name: 'Chatbot', icon: Bot },
@@ -20,6 +21,7 @@ const features: { name: Feature; icon: React.FC<React.SVGProps<SVGSVGElement>> }
     { name: 'DeepAnalysis', icon: BrainCircuit },
     { name: 'Regulations', icon: ShieldCheck },
     { name: 'FlightLog', icon: Activity },
+    { name: 'Marketplace', icon: ShoppingBag },
     { name: 'Tips', icon: Lightbulb },
 ];
 
@@ -43,6 +45,8 @@ export default function App() {
                 return <FlightLog />;
             case 'Tips':
                 return <Tips />;
+            case 'Marketplace':
+                return <Marketplace />;
             default:
                 return <Chatbot history={chatHistory} setHistory={setChatHistory} />;
         }

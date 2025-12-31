@@ -234,3 +234,57 @@ export const Lightbulb: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
         <path d="M10 22h4" />
     </Icon>
 );
+
+export const ShoppingBag: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <Icon {...props}>
+    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+    <path d="M3 6h18" />
+    <path d="M16 10a4 4 0 0 1-8 0" />
+  </Icon>
+);
+
+export const Tag: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <Icon {...props}>
+    <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
+    <path d="M7 7h.01" />
+  </Icon>
+);
+
+export const DollarSign: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <Icon {...props}>
+    <line x1="12" x2="12" y1="2" y2="22" />
+    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+  </Icon>
+);
+
+export const PlusCircle: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <Icon {...props}>
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" x2="12" y1="8" y2="16" />
+    <line x1="8" x2="12" y1="12" y2="12" />
+  </Icon>
+);
+
+export const AlertCircle: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <Icon {...props}>
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+    </Icon>
+);
+
+export const Truck: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <Icon {...props}>
+    <rect width="16" height="13" x="2" y="6" rx="2" />
+    <path d="M16 19h2a2 2 0 0 0 2-2v-5h-4" />
+    <path d="M13 19h-1" />
+    <circle cx="7.5" cy="19" r="2.5" />
+    <circle cx="17.5" cy="19" r="2.5" />
+  </Icon>
+);
+
+export const Shield: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <Icon {...props}>
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+  </Icon>
+);
