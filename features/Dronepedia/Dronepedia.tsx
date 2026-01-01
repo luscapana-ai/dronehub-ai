@@ -1,117 +1,43 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { generateGroundedResponse, generateChatResponse } from '../../services/geminiService';
 import { Button } from '../../components/ui/Button';
 import { Spinner } from '../../components/ui/Spinner';
-import { Send, Link, Bot, Search, Calendar, Filter, Gamepad, X, Activity, ShieldCheck, Lightbulb, Trash, Truck, Shield } from '../../components/Icons';
+import { Send, Link, Bot, Search, Filter, X, Activity, Zap, ShieldCheck, Clock, Settings, Layers } from '../../components/Icons';
 import Markdown from 'react-markdown';
 import type { ChatMessage, GroundingSource } from '../../types';
 import type { Feature } from '../../App';
 
 const TRENDS_TOPICS = [
-    'AI-Powered Autonomous Swarms',
-    'Hydrogen Fuel Cell Drones',
-    'Remote ID Implementation Trends',
-    'Solid-State Battery Breakthroughs',
-    'Urban Air Mobility (UAM) Progress',
-    'Agriculture 4.0: Drone Analytics',
-    'Next-Gen FPV Digital Protocols',
-    'Drone-in-a-Box Solutions',
-    'Green Energy Infrastructure Inspection',
-    'Advanced Collision Avoidance AI'
+    'AI Drone Swarm Defense 2025',
+    'Hydrogen Cell Long-Range Flights',
+    'Solid State Battery Prototypes',
+    'Remote ID 2.0 Global Standards',
+    'Urban Air Mobility Infrastructure'
 ];
 
-const INSURANCE_LOGISTICS_TOPICS = [
-    'Hull Insurance vs Liability',
-    'Commercial vs Recreational Insurance',
-    'Shipping LiPo Batteries (Regulations)',
-    'International Drone Travel Laws',
-    'ATA Carnet for Gear Transport',
-    'Packaging High-Value Gear',
-    'Escrow Service Benefits',
-    'Customs & Duties for Importers',
-    'Safe Handling of Fire Hazards',
-    'Drone Fleet Insurance Plans'
+const TECHNIQUES = [
+    'High-Speed Split-S',
+    'Matty Flip Obstacle Clearance',
+    'Precision Proximity Orbit',
+    'Cinematic Reveal Dolly',
+    'Juicy Flick Flow'
 ];
 
 const TACTICS = [
-    '3D Mapping & Modeling',
-    'Active Track / Follow Me',
-    'Cinematic Panning',
-    'Creeping Line Ahead (SAR)',
-    'Crop Spraying Patterns',
-    'Dolly Zoom (Vertigo Effect)',
-    'Drone Jib/Crane Shot',
-    'Dronie Shot',
-    'Expanding Square Search (SAR)',
-    'FPV Dive',
-    'FPV Matty Flip',
-    'FPV Orbit',
-    'FPV Power Loop',
-    'FPV Rubiks Cube',
-    'FPV Split-S Maneuver',
-    'FPV Trippy Spin',
-    'HDR Bracketing',
-    'Hyperlapse Video',
-    'Lidar Scanning',
-    'Long-Exposure Photography',
-    'ND Filter Usage',
-    'Orbit Mode',
-    'Panorama Stitching',
-    'Photogrammetry Overlap',
-    'Point of Interest (POI) Lock',
-    'Reveal Shot',
-    'Structure Inspection (Vertical)',
-    'Thermal Inspection Patterns',
-    'Top-Down / Bird\'s Eye View',
-    'Tripod Mode / Cine Mode',
-    'Waypoint Navigation',
+    'SAR: Expanding Square Pattern',
+    'Industrial: Vertical Grid Scans',
+    'Agri: Multispectral Field Audit',
+    'Security: 24/7 Tethered Watch',
+    'Photogrammetry: Nadir/Oblique Mix'
 ];
 
-const GEAR_TOPICS = [
-    'Analog vs Digital FPV Latency',
-    'Antenna Connectors (SMA/RP-SMA/MMCX)',
-    'Box Goggles vs Low-Profile Goggles',
-    'Controller Form Factors (Gamepad vs Full-Size)',
-    'Crossfire vs ExpressLRS (ELRS)',
-    'DJI O3 vs Air Unit vs Vista',
-    'EdgeTX vs OpenTX Firmware',
-    'ELRS Packet Rates (150Hz vs 500Hz)',
-    'Gimbal Mechanics (Hall Effect vs Potentiometer)',
-    'Gimbal Stick Ends & Grip Types',
-    'HDZero System Overview',
-    'Head Tracking Configuration',
-    'Long Range RF (900MHz vs 2.4GHz)',
-    'Multiprotocol Modules (4-in-1)',
-    'Patch vs Omni Antennas',
-    'Radio Battery Mods (Li-ion 18650)',
-    'Receiver Binding Methods',
-    'Simulator Wireless Dongles',
-    'Video Receiver Modules (RapidFire vs Fusion)',
-    'Walksnail Avatar System'
-];
-
-const MAINTENANCE_TOPICS = [
-    'Battery Connector (XT60) Wear',
-    'Battery Storage Voltage (3.8V/cell)',
-    'Brushless Motor Cleaning',
-    'Carbon Fiber Frame Delamination',
-    'Conformal Coating Inspection',
-    'Crash Damage Assessment',
-    'ESC & Flight Controller Diagnostics',
-    'Firmware Updates (Betaflight/DJI)',
-    'Gimbal Calibration & Care',
-    'Lens Cleaning & Sensor Protection',
-    'Long-Term Storage Prep',
-    'Motor Bearing Lubrication',
-    'Post-Flight Cleaning Routine',
-    'Pre-Flight Checklist',
-    'Propeller Balancing',
-    'Propeller Inspection (Stress Marks)',
-    'Receiver Antenna Integrity',
-    'Screw Tightening (Loctite Check)',
-    'Soldering Joint Inspection',
-    'Troubleshooting Video Noise'
+const MAINTENANCE_EQUIPMENT = [
+    'TS101 Smart Soldering Iron',
+    'ISDT 608AC Smart Charger',
+    'SmokeStopper Fuse Logic',
+    'VIFLY ShortSaver 2',
+    'Ethix Tool Kit V3'
 ];
 
 interface DronepediaProps {
@@ -126,13 +52,19 @@ export const Dronepedia: React.FC<DronepediaProps> = ({ setActiveFeature, setCha
     const [sources, setSources] = useState<GroundingSource[] | undefined>(undefined);
     const [lastQuery, setLastQuery] = useState('');
     const [topicFilter, setTopicFilter] = useState('');
+    const [newsTicker, setNewsTicker] = useState<string>("Initializing Global Intelligence Stream...");
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!searchPrompt.trim()) return;
-        setLastQuery(searchPrompt);
-        await performSearch(searchPrompt);
-    };
+    useEffect(() => {
+        const fetchNews = async () => {
+            try {
+                const response = await generateGroundedResponse("Top 3 drone industry headlines for today. Concise.", "googleSearch");
+                setNewsTicker(response.text || "Systems nominal. All links active.");
+            } catch (e) {
+                setNewsTicker("Sector news unavailable. Local systems online.");
+            }
+        };
+        fetchNews();
+    }, []);
 
     const performSearch = async (query: string) => {
         setIsLoading(true);
@@ -146,17 +78,25 @@ export const Dronepedia: React.FC<DronepediaProps> = ({ setActiveFeature, setCha
                  const extractedSources = chunks
                     .map((chunk: any) => {
                         if (chunk.web) return { uri: chunk.web.uri, title: chunk.web.title };
-                        if (chunk.maps) return { uri: chunk.maps.uri, title: chunk.maps.title };
                         return null;
                     })
                     .filter((s: any) => s !== null) as GroundingSource[];
                 setSources(extractedSources);
             }
         } catch (error) {
-            console.error("Search failed:", error);
-            setResult("Sorry, I encountered an error while searching.");
+            setResult("Tactical link offline. Re-syncing...");
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleTopicClick = (topic: string, category: string) => {
+        setSearchPrompt(topic);
+        setLastQuery(topic);
+        if (category === 'Trends' || category === 'Equipment') {
+            performSearch(`Provide a deep dive and 2025 specs for: ${topic}`);
+        } else {
+            handleGenerate(topic, (t) => `Act as an elite drone pilot/engineer. Deep dive into "${t}" as it relates to ${category}. Structure with: Overview, Tactical Advantages, and Step-by-Step Execution.`);
         }
     };
 
@@ -168,137 +108,83 @@ export const Dronepedia: React.FC<DronepediaProps> = ({ setActiveFeature, setCha
         setSources(undefined);
         try {
             const prompt = promptTemplate(topic);
-            const response = await generateChatResponse([], prompt, 'gemini-3-pro-preview');
+            const response = await generateChatResponse([], prompt, 'gemini-3-pro-preview', true);
             setResult(response.text);
         } catch (error) {
-             console.error("Generation failed:", error);
-             setResult("Sorry, I couldn't generate that information right now.");
+             setResult("Logic engine timeout.");
         } finally {
             setIsLoading(false);
         }
     }
 
-    const handleTrendClick = (topic: string) => {
-        handleGenerate(topic, (t) => `Discuss the future trend: "${t}" in the drone industry.
-        Focus on:
-        1. **Technology**: How it works and innovations.
-        2. **Market Impact**: Which industries are affected.
-        3. **Challenges**: Regulatory or technical hurdles.`);
-    };
-
-    const handleTacticClick = (tactic: string) => {
-        handleGenerate(tactic, (t) => `Explain the drone technique or tactic: "${t}".
-        Provide a step-by-step guide on execution, safety, and ideal use cases.`);
-    };
-
-    const handleInsuranceClick = (topic: string) => {
-        handleGenerate(topic, (t) => `Provide professional drone-related guidance on: "${t}".
-        Include:
-        1. **Core Concepts**: What is it and why is it important for pilots?
-        2. **Legal Requirements**: Is this mandated by law (FAA/EASA)?
-        3. **Cost Factors**: What affects pricing or logistics complexity?
-        4. **Best Practices**: Professional tips for implementation.`);
-    };
-
-    const handleMaintenanceClick = (topic: string) => {
-        handleGenerate(topic, (t) => `Act as a certified drone technician. Provide a maintenance guide for "${t}".
-        Structure with Tools Needed, Step-by-Step Procedure, and Red Flags.`);
-    };
-
-    const handleGearClick = (topic: string) => {
-        handleGenerate(topic, (t) => `Act as an FPV equipment expert. Provide a technical breakdown for "${t}".`);
-    };
-
     const handleDiscussInChat = () => {
         if (!result) return;
-        const newHistory: ChatMessage[] = [
+        setChatHistory(prev => [...prev, 
             { role: 'user', parts: [{ text: lastQuery }] },
             { role: 'model', parts: [{ text: result }], sources: sources }
-        ];
-        setChatHistory(prev => [...prev, ...newHistory]);
+        ]);
         setActiveFeature('Chatbot');
     };
 
-    const filterTopics = (topics: string[]) => {
-        if (!topicFilter.trim()) return topics;
-        return topics.filter(t => t.toLowerCase().includes(topicFilter.toLowerCase()));
-    };
-
-    const filteredTrends = filterTopics(TRENDS_TOPICS);
-    const filteredInsurance = filterTopics(INSURANCE_LOGISTICS_TOPICS);
-    const filteredTactics = filterTopics(TACTICS);
-    const filteredMaintenance = filterTopics(MAINTENANCE_TOPICS);
-    const filteredGear = filterTopics(GEAR_TOPICS);
+    const filterTopics = (topics: string[]) => topics.filter(t => t.toLowerCase().includes(topicFilter.toLowerCase()));
 
     return (
-        <div className="max-w-7xl mx-auto space-y-8">
-             <div className="text-center">
-                <h2 className="text-3xl font-black mb-2 text-white text-glow">Dronepedia Knowledge Hub</h2>
-                <p className="text-gray-400">Master every tactic, tool, and technique with AI-grounded intel.</p>
+        <div className="max-w-7xl mx-auto space-y-10 animate-fade-in pb-20">
+             <div className="text-center space-y-4">
+                <h2 className="text-6xl font-black text-white uppercase tracking-tighter italic">Tactical Manual</h2>
+                <div className="bg-amber-500/10 border border-amber-500/20 py-2 px-6 rounded-full inline-block max-w-2xl overflow-hidden">
+                    <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest whitespace-nowrap animate-pulse">
+                        LIVE INTEL: {newsTicker}
+                    </p>
+                </div>
              </div>
 
-            {/* Main Search */}
-            <form onSubmit={handleSubmit} className="relative max-w-2xl mx-auto group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full blur opacity-25 group-focus-within:opacity-50 transition duration-1000"></div>
+            <form onSubmit={(e) => { e.preventDefault(); performSearch(searchPrompt); }} className="relative max-w-2xl mx-auto group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-amber-500 to-orange-600 rounded-full blur opacity-25 group-focus-within:opacity-50 transition duration-1000"></div>
                 <div className="relative">
                     <input
-                        id="dronepedia-search"
                         type="text"
                         value={searchPrompt}
                         onChange={(e) => setSearchPrompt(e.target.value)}
-                        placeholder="Search tactics, equipment, or insurance..."
-                        className="w-full p-5 pl-12 pr-36 bg-gray-900 border border-gray-700 rounded-full focus:ring-2 focus:ring-cyan-500 focus:outline-none text-white shadow-2xl"
+                        placeholder="Scan tactics, tools, or news..."
+                        className="w-full p-6 pl-14 pr-40 bg-gray-900 border border-gray-700 rounded-full focus:ring-2 focus:ring-amber-500 focus:outline-none text-white font-black uppercase tracking-tight shadow-2xl"
                     />
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    
-                    {searchPrompt && (
-                        <button
-                            type="button"
-                            onClick={() => setSearchPrompt('')}
-                            className="absolute right-28 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white p-2 rounded-full hover:bg-gray-700 transition-colors"
-                        >
-                            <X className="w-4 h-4" />
-                        </button>
-                    )}
-
-                    <Button type="submit" disabled={isLoading} className="absolute right-2 top-1/2 transform -translate-y-1/2 rounded-full px-6 py-2.5">
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 w-6 h-6" />
+                    <Button type="submit" disabled={isLoading} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-8 py-3 bg-amber-600 font-black uppercase tracking-widest text-[10px]">
                         {isLoading ? <Spinner /> : 'Analyze'}
                     </Button>
                 </div>
             </form>
 
-            {/* Results Area */}
             {(result || isLoading) && (
-                <div className="bg-gray-800 rounded-2xl p-8 shadow-2xl border border-gray-700 animate-fade-in">
+                <div className="bg-gray-800/40 backdrop-blur-3xl rounded-[4rem] p-10 shadow-3xl border border-gray-700/50 animate-fade-in">
                     {isLoading ? (
-                        <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                        <div className="flex flex-col items-center justify-center py-16 space-y-4">
                             <Spinner />
-                            <p className="text-cyan-400 font-bold tracking-widest animate-pulse uppercase">Syncing Intel...</p>
+                            <p className="text-amber-500 font-black tracking-widest animate-pulse uppercase text-xs">Accessing Mainframe...</p>
                         </div>
                     ) : (
-                        <div className="space-y-6">
-                            <div className="prose prose-invert max-w-none prose-cyan">
+                        <div className="space-y-8">
+                            <div className="prose prose-invert max-w-none prose-amber bg-gray-900/50 p-10 rounded-[3rem] border border-gray-700/50 shadow-inner">
                                 <Markdown>{result}</Markdown>
                             </div>
                             
                             {sources && sources.length > 0 && (
-                                <div className="mt-6 pt-6 border-t border-gray-700">
-                                    <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-3">Grounding Sources:</h4>
-                                    <div className="flex flex-wrap gap-2">
+                                <div className="pt-6 border-t border-gray-700/50">
+                                    <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">Referenced Uplinks:</h4>
+                                    <div className="flex flex-wrap gap-3">
                                         {sources.map((source, idx) => (
-                                            <a key={idx} href={source.uri} target="_blank" rel="noopener noreferrer" className="flex items-center text-xs bg-gray-700 hover:bg-gray-600 text-cyan-400 px-3 py-2 rounded-xl transition-all border border-transparent hover:border-cyan-500/30">
-                                                <Link className="w-3 h-3 mr-2" />
-                                                {source.title}
+                                            <a key={idx} href={source.uri} target="_blank" rel="noopener noreferrer" className="flex items-center text-[10px] font-black bg-gray-800 hover:bg-gray-700 text-amber-400 px-5 py-3 rounded-2xl transition-all border border-gray-700 hover:border-amber-500/30 uppercase tracking-wider">
+                                                <Link className="w-3 h-3 mr-2" /> {source.title}
                                             </a>
                                         ))}
                                     </div>
                                 </div>
                             )}
 
-                            <div className="flex justify-end pt-4">
-                                <Button onClick={handleDiscussInChat} variant="secondary" className="text-sm rounded-xl py-3 px-6 uppercase font-black tracking-widest">
-                                    <Bot className="w-4 h-4 mr-2 text-cyan-400" />
-                                    Deep Dive Chat
+                            <div className="flex justify-end gap-4">
+                                <Button onClick={handleDiscussInChat} variant="secondary" className="px-10 py-5 bg-gray-900 rounded-[2rem] text-[10px] font-black uppercase tracking-widest border border-white/5">
+                                    <Bot className="w-4 h-4 mr-3 text-amber-500" /> Tactical Briefing
                                 </Button>
                             </div>
                         </div>
@@ -306,63 +192,37 @@ export const Dronepedia: React.FC<DronepediaProps> = ({ setActiveFeature, setCha
                 </div>
             )}
             
-            {/* Filter Bar */}
             <div className="max-w-xl mx-auto relative group">
                 <input
                     type="text"
                     value={topicFilter}
                     onChange={(e) => setTopicFilter(e.target.value)}
-                    placeholder="Filter topics (e.g. 'Insurance', 'GPS', 'Motor')..."
-                    className="w-full p-4 pl-12 bg-gray-900/50 border border-gray-700 rounded-2xl text-sm text-white focus:outline-none focus:border-cyan-500 shadow-inner"
+                    placeholder="Filter Manual Sections..."
+                    className="w-full p-4 pl-12 bg-gray-900/40 border border-gray-700 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white focus:outline-none focus:border-amber-500 shadow-inner"
                 />
-                <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
+                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
-                {/* Tactics */}
-                <div className="bg-gray-800/40 p-6 rounded-[2rem] border border-gray-800 hover:border-cyan-500/30 transition-all group shadow-lg">
-                    <h3 className="text-lg font-black text-cyan-400 mb-5 flex items-center tracking-tight uppercase">
-                        <span className="bg-cyan-500/10 p-3 rounded-2xl mr-3 group-hover:scale-110 transition-transform">🎯</span>
-                        Tactics & Skills
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                        {filteredTactics.map((t) => (
-                            <button key={t} onClick={() => handleTacticClick(t)} className="text-[10px] font-bold bg-gray-900/50 hover:bg-cyan-500 hover:text-white text-gray-400 px-3 py-2 rounded-xl transition-all border border-gray-700/50 uppercase tracking-wider">
-                                {t}
-                            </button>
-                        ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                {[
+                    { title: 'Trends', icon: '📈', color: 'text-amber-400', bg: 'bg-amber-500/10', topics: TRENDS_TOPICS },
+                    { title: 'Techniques', icon: '🎮', color: 'text-cyan-400', bg: 'bg-cyan-500/10', topics: TECHNIQUES },
+                    { title: 'Tactics', icon: '🎯', color: 'text-emerald-400', bg: 'bg-emerald-500/10', topics: TACTICS },
+                    { title: 'Equipment', icon: '🔧', color: 'text-purple-400', bg: 'bg-purple-500/10', topics: MAINTENANCE_EQUIPMENT }
+                ].map(cat => (
+                    <div key={cat.title} className="bg-gray-800/20 p-8 rounded-[3rem] border border-white/5 space-y-6 group hover:border-white/10 transition-all">
+                        <h3 className={`text-xs font-black ${cat.color} flex items-center tracking-[0.2em] uppercase`}>
+                            <span className={`${cat.bg} p-3 rounded-2xl mr-3 group-hover:scale-110 transition-transform`}>{cat.icon}</span> {cat.title}
+                        </h3>
+                        <div className="flex flex-col gap-2">
+                            {filterTopics(cat.topics).map((t) => (
+                                <button key={t} onClick={() => handleTopicClick(t, cat.title)} className="text-left text-[9px] font-black bg-gray-900/50 hover:bg-gray-800 text-gray-400 hover:text-white px-4 py-3 rounded-xl transition-all border border-gray-800 uppercase tracking-widest">
+                                    {t}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                </div>
-
-                {/* Insurance & Logistics */}
-                <div className="bg-gray-800/40 p-6 rounded-[2rem] border border-gray-800 hover:border-emerald-500/30 transition-all group shadow-lg">
-                    <h3 className="text-lg font-black text-emerald-400 mb-5 flex items-center tracking-tight uppercase">
-                        <span className="bg-emerald-500/10 p-3 rounded-2xl mr-3 group-hover:scale-110 transition-transform">🛡️</span>
-                        Insurance & Logistics
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                        {filteredInsurance.map((t) => (
-                            <button key={t} onClick={() => handleInsuranceClick(t)} className="text-[10px] font-bold bg-gray-900/50 hover:bg-emerald-500 hover:text-white text-gray-400 px-3 py-2 rounded-xl transition-all border border-gray-700/50 uppercase tracking-wider">
-                                {t}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Maintenance */}
-                <div className="bg-gray-800/40 p-6 rounded-[2rem] border border-gray-800 hover:border-amber-500/30 transition-all group shadow-lg">
-                    <h3 className="text-lg font-black text-amber-400 mb-5 flex items-center tracking-tight uppercase">
-                        <span className="bg-amber-500/10 p-3 rounded-2xl mr-3 group-hover:scale-110 transition-transform">🔧</span>
-                        Tech Support
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                        {filteredMaintenance.map((t) => (
-                            <button key={t} onClick={() => handleMaintenanceClick(t)} className="text-[10px] font-bold bg-gray-900/50 hover:bg-amber-500 hover:text-white text-gray-400 px-3 py-2 rounded-xl transition-all border border-gray-700/50 uppercase tracking-wider">
-                                {t}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                ))}
             </div>
         </div>
     );
